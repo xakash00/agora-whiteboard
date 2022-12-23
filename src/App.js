@@ -1,48 +1,67 @@
-
 import "./App.css";
-import { useEffect } from "react";
-import { createFastboard, createUI } from "@netless/fastboard";
-
+import { RecordRTCPromisesHandler } from "recordrtc";
+import { useState } from "react";
+import { saveAs } from "file-saver";
 function App() {
-  const styles = {
-    width: "100%",
-    height: "72vh",
-    backgroundColor: "#fff",
+  const [recorder, setRecorder] = useState();
+  const [stream, setStream] = useState();
+  const [videoBlob, setVideoUrlBlob] = useState();
+
+  const startRecording = async () => {
+    const mediadevices = navigator.mediaDevices;
+    const stream = await mediadevices.getDisplayMedia({
+      video: true,
+      audio: false,
+    });
+    let recorder = new RecordRTCPromisesHandler(stream, {
+      type: "video",
+    });
+    await recorder.startRecording();
+    setRecorder(recorder);
+    setStream(stream);
+    setVideoUrlBlob(null);
   };
 
-  let app;
-  async function mountFastboard(div) {
-    app = await createFastboard({
-      sdkConfig: {
-        appIdentifier: "yj-J8GWuEe2PfG3c9c975A/Qx3WgUu-5RCjDQ",
-        region: "in-mum",
-      },
-      joinRoom: {
-        uid: "114",
-        uuid: "415545207d0111eda6858354054d6a12",
-        roomToken:"netlessroom_yws9nu1hluttnu5ob2s1tmrjqszlehbpcmvbdd0xnjcxnzczodizmda4jm5vbmnlpte2nze3nzaymjmwmdgwmczyb2xlptemc2lnpwvkzjjlzjfmnwmzzjrjnwnlyjfizwyymjhhotnkodhjytliymywzdiyngnjowzmywq2nti2mjlmntg3ywqyowymdxvpzd00mtu1nduymddkmdexmwvkyty4ntgzntqwntrknmexmg",
-        isWritable: true 
-      },
-      managerConfig: {
-        cursor: false,
-      },
-    });
-    window.app = app;
-    return createUI(app, div);
-  }
+  const stopRecording = async () => {
+    if (recorder) {
+      await recorder.stopRecording();
+      const blob = await recorder.getBlob();
+      stream.stop();
+      setVideoUrlBlob(blob);
+      setStream(null);
+      setRecorder(null);
+    }
+  };
 
-  useEffect(() => {
-    const timeout_id = setTimeout(
-      () => mountFastboard(document.getElementById("whiteboard")),
-      0
-    );
-    return () => clearTimeout(timeout_id);
-  }, []);
-
+  const downloadVideo = () => {
+    if (videoBlob) {
+      const mp4File = new File([videoBlob], "demo.mp4", { type: "video/mp4" });
+      saveAs(mp4File, `Video-${Date.now()}.mp4`);
+      // saveAs(videoBlob, `Video-${Date.now()}.webm`)
+    }
+  };
 
   return (
-    <div className="App">
-      <div id="whiteboard" style={styles}></div>
+    <div className="container App">
+      <div className="mt-5">
+        <h3 className="lead mb-4">Screen Recording</h3>
+        <div className="row mb-5">
+          <div className="col-md-4">
+            <button onClick={startRecording} className="btn-primary btn">Start Recording</button>
+          </div>
+          <div className="col-md-4">
+            <button onClick={stopRecording} className="btn-danger btn">Stop Recording</button>
+          </div>
+          <div className="col-md-4">
+            <button onClick={downloadVideo} className="btn-secondary btn">Download Recording</button>
+          </div>
+        </div>
+        <iframe
+          className="iframe"
+          title="animation"
+          src="https://embed.lottiefiles.com/animation/95875"
+        ></iframe>
+      </div>
     </div>
   );
 }
